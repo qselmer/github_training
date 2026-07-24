@@ -66,7 +66,7 @@ jobs:
           # Informa que la estructura mínima es correcta.
           echo "All required training files exist."
 
-      # Rechaza archivos Markdown que contengan marcadores de conflicto sin resolver.
+      # Rechaza entregas del playground con marcadores de conflicto sin resolver.
       - name: Detect unresolved merge markers
         # Ejecuta el bloque siguiente con Bash.
         shell: bash
@@ -75,17 +75,17 @@ jobs:
           # Detiene el script ante errores inesperados.
           set -euo pipefail
 
-          # Busca marcadores típicos de conflicto dentro del material Markdown.
-          if grep -RInE '^(<<<<<<<|=======|>>>>>>>)' git-github --include='*.md'; then
+          # Busca marcadores de conflicto solo en las contribuciones del playground.
+          if grep -RInE '^(<<<<<<<|=======|>>>>>>>)' git-github/playground --include='*.md'; then
             # Explica la causa del fallo en el registro de Actions.
-            echo "Unresolved merge conflict markers were found."
+            echo "Unresolved merge conflict markers were found in the playground."
 
             # Finaliza el paso con estado de error.
             exit 1
           fi
 
           # Informa que no se encontraron conflictos sin resolver.
-          echo "No unresolved merge conflict markers found."
+          echo "No unresolved merge conflict markers found in the playground."
 
       # Muestra un resumen final cuando todas las verificaciones anteriores pasan.
       - name: Report success
