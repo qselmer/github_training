@@ -1,0 +1,95 @@
+# Nombre visible del workflow en la pestaña Actions.
+name: Training repository checks
+
+# Eventos que activan automáticamente el workflow.
+on:
+  # Ejecuta las verificaciones cuando se envían commits al repositorio.
+  push:
+    # Limita la ejecución a cambios relacionados con el material del curso.
+    paths:
+      - "git-github/**"
+      - ".github/workflows/training-check.yml"
+
+  # Ejecuta las verificaciones cuando se crea o actualiza un pull request.
+  pull_request:
+    # Limita la ejecución a cambios relacionados con el material del curso.
+    paths:
+      - "git-github/**"
+      - ".github/workflows/training-check.yml"
+
+# Concede únicamente permiso de lectura sobre el contenido del repositorio.
+permissions:
+  contents: read
+
+# Define los trabajos que ejecutará GitHub Actions.
+jobs:
+  # Identificador interno del trabajo principal.
+  validate-training-material:
+    # Usa una máquina virtual Linux administrada por GitHub.
+    runs-on: ubuntu-latest
+
+    # Agrupa las acciones secuenciales del trabajo.
+    steps:
+      # Descarga el contenido del repositorio dentro de la máquina virtual.
+      - name: Checkout repository
+        # Usa la acción oficial de GitHub para obtener el código.
+        uses: actions/checkout@v4
+
+      # Verifica que la estructura mínima del curso exista.
+      - name: Verify required files
+        # Ejecuta el bloque siguiente con Bash.
+        shell: bash
+        # Contiene los comandos de validación.
+        run: |
+          # Detiene el script ante errores, variables inexistentes o fallos en tuberías.
+          set -euo pipefail
+
+          # Declara los archivos mínimos que debe conservar el repositorio.
+          required_files=(
+            "git-github/README.md"
+            "git-github/practices/00-setup.md"
+            "git-github/practices/01-first-repository.md"
+            "git-github/practices/05-fork-and-pull-request.md"
+            "git-github/practices/07-github-actions.md"
+            "git-github/playground/submissions/TEMPLATE.md"
+          )
+
+          # Recorre cada ruta declarada en la lista.
+          for file in "${required_files[@]}"; do
+            # Informa qué archivo está siendo comprobado.
+            echo "Checking ${file}"
+
+            # Finaliza con error si el archivo no existe.
+            test -f "${file}"
+          done
+
+          # Informa que la estructura mínima es correcta.
+          echo "All required training files exist."
+
+      # Rechaza archivos Markdown que contengan marcadores de conflicto sin resolver.
+      - name: Detect unresolved merge markers
+        # Ejecuta el bloque siguiente con Bash.
+        shell: bash
+        # Contiene la búsqueda de marcadores problemáticos.
+        run: |
+          # Detiene el script ante errores inesperados.
+          set -euo pipefail
+
+          # Busca marcadores típicos de conflicto dentro del material Markdown.
+          if grep -RInE '^(<<<<<<<|=======|>>>>>>>)' git-github --include='*.md'; then
+            # Explica la causa del fallo en el registro de Actions.
+            echo "Unresolved merge conflict markers were found."
+
+            # Finaliza el paso con estado de error.
+            exit 1
+          fi
+
+          # Informa que no se encontraron conflictos sin resolver.
+          echo "No unresolved merge conflict markers found."
+
+      # Muestra un resumen final cuando todas las verificaciones anteriores pasan.
+      - name: Report success
+        # Ejecuta un comando simple en Bash.
+        shell: bash
+        # Imprime el mensaje de finalización.
+        run: echo "Git and GitHub training checks passed."
